@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "description": "A simple ranked voting system for our group holiday",
   "main": "main.ts",
-  "type": "module",
   "scripts": {
-    "start": "ts-node --esm src/main.ts",
+    "start": "ts-node src/main.ts",
     "test": "jest"
   },
   "author": "Tom Pretty <tompretty2@gmail.com> (https://tompretty.me/)",
