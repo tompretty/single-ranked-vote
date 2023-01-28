@@ -21,4 +21,4 @@ const destinations = [
 
 const outcome = singleRankedVote(votes, destinations);
 
-console.log({ outcome });
+console.dir({ outcome }, { depth: null });
