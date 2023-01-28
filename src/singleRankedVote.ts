@@ -66,19 +66,20 @@ export function singleRankedVoteRound(
 type VoteCount = Record<string, number>;
 
 function countVotes(votes: Votes, destinations: string[]): VoteCount {
-  const voteCount: Record<string, number> = {};
+  const initialCounts = destinations.reduce<Record<string, number>>(
+    (counts, d) => ({ ...counts, [d]: 0 }),
+    {}
+  );
 
-  destinations.forEach((d) => {
-    voteCount[d] = 0;
-  });
-
-  Object.entries(votes)
+  return Object.entries(votes)
     .filter(([_, destinations]) => destinations.length > 0)
-    .forEach(([_, destinations]) => {
-      voteCount[destinations[0]]++;
-    });
-
-  return voteCount;
+    .reduce<Record<string, number>>(
+      (counts, [_, destinations]) => ({
+        ...counts,
+        [destinations[0]]: (counts[destinations[0]] ?? 0) + 1,
+      }),
+      initialCounts
+    );
 }
 
 function getDestinationsOverTheThreshold(
