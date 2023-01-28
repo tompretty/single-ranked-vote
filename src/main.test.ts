@@ -10,24 +10,28 @@ describe("singleRankedVote", () => {
     };
     const destinations = ["Spain", "Cyprus"];
 
-    const winner = singleRankedVote(votes, destinations);
+    const outcome = singleRankedVote(votes, destinations);
 
-    expect(winner).toEqual("Spain");
+    expect(outcome).toEqual([{ type: "WINNER_DECLARED", winner: "Spain" }]);
   });
 
-  //   it("does multiple rounds of voting if there is no initial majority", () => {
-  //     const votes: Votes = {
-  //       Tom: ["Spain", "Cyprus"],
-  //       Emily: ["Spain", "Cyprus"],
-  //       Dylan: ["Cyprus", "Spain"],
-  //       Susanna: ["Cyprus", "Spain"],
-  //       Jay: ["Turkey", "Spain"],
-  //     };
+  it("does multiple rounds of voting if there is no initial majority", () => {
+    const votes: Votes = {
+      Tom: ["Spain"],
+      Emily: ["Spain"],
+      Dylan: ["Cyprus"],
+      Susanna: ["Cyprus"],
+      Jay: ["Turkey", "Spain"],
+    };
+    const destinations = ["Spain", "Cyprus", "Turkey"];
 
-  //     const winner = singleRankedVote(votes);
+    const outcome = singleRankedVote(votes, destinations);
 
-  //     expect(winner).toEqual("Spain");
-  //   });
+    expect(outcome).toEqual([
+      { type: "ELIMINATION", eliminated: ["Turkey"] },
+      { type: "WINNER_DECLARED", winner: "Spain" },
+    ]);
+  });
 });
 
 describe("singleRankedVoteRound", () => {

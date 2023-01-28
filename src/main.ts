@@ -1,27 +1,5 @@
 export type Votes = Record<string, string[]>;
 
-export function singleRankedVote(votes: Votes, destinations: string[]) {
-  const scores: Record<string, number> = {};
-
-  destinations.forEach((d) => {
-    scores[d] = 0;
-  });
-
-  let numVotes = 0;
-  Object.entries(votes).forEach(([_, destinations]) => {
-    scores[destinations[0]]++;
-    numVotes++;
-  });
-
-  const quota = Math.ceil(numVotes / 2);
-
-  for (let [destination, score] of Object.entries(scores)) {
-    if (score >= quota) {
-      return destination;
-    }
-  }
-}
-
 type RoundOutcome =
   | WinnerDeclaredOutcome
   | TieDeclaredOutcome
@@ -35,6 +13,26 @@ type WinnerDeclaredOutcome = {
 type TieDeclaredOutcome = { type: "TIE_DECLARED"; winners: string[] };
 
 type EliminationOutcome = { type: "ELIMINATION"; eliminated: string[] };
+
+export function singleRankedVote(
+  votes: Votes,
+  destinations: string[],
+  outcomes: RoundOutcome[] = []
+): RoundOutcome[] {
+  const outcome = singleRankedVoteRound(votes, destinations);
+
+  const newOutcomes = [...outcomes, outcome];
+
+  if (outcome.type === "WINNER_DECLARED" || outcome.type === "TIE_DECLARED") {
+    return newOutcomes;
+  }
+
+  return singleRankedVote(
+    removeEliminatedVotes(votes, outcome.eliminated),
+    removeEliminatedDestinations(destinations, outcome.eliminated),
+    newOutcomes
+  );
+}
 
 export function singleRankedVoteRound(
   votes: Votes,
@@ -122,4 +120,20 @@ function tie(winners: string[]): TieDeclaredOutcome {
 
 function elimination(eliminated: string[]): EliminationOutcome {
   return { type: "ELIMINATION", eliminated };
+}
+
+function removeEliminatedVotes(votes: Votes, eliminated: string[]): Votes {
+  return Object.fromEntries(
+    Object.entries(votes).map(([member, ranking]) => [
+      member,
+      removeEliminatedDestinations(ranking, eliminated),
+    ])
+  );
+}
+
+function removeEliminatedDestinations(
+  destinations: string[],
+  eliminated: string[]
+): string[] {
+  return destinations.filter((d) => !eliminated.includes(d));
 }
