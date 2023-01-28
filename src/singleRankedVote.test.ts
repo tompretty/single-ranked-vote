@@ -1,5 +1,9 @@
 import { describe, it, expect } from "@jest/globals";
-import { singleRankedVote, singleRankedVoteRound, Votes } from "./main";
+import {
+  singleRankedVote,
+  singleRankedVoteRound,
+  Votes,
+} from "./singleRankedVote";
 
 describe("singleRankedVote", () => {
   it("declares a winner if a destination gets more than 50% of the vote", () => {
