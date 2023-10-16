@@ -3,113 +3,113 @@ import { describe, expect, it } from "vitest";
 import { vote, voteRound } from "./singleRankedVote.js";
 
 describe("singleRankedVote", () => {
-	it("declares a winner if a destination gets more than 50% of the vote", () => {
+	it("declares a winner if an option gets more than 50% of the vote", () => {
 		const outcome = vote({
-			destinations: ["D1", "D2"],
+			options: ["O1", "O2"],
 			votes: [
-				{ destinations: ["D1"], person: "P1" },
-				{ destinations: ["D1"], person: "P2" },
-				{ destinations: ["D2"], person: "P3" },
+				{ person: "P1", preferences: ["O1"] },
+				{ person: "P2", preferences: ["O1"] },
+				{ person: "P3", preferences: ["O2"] },
 			],
 		});
 
-		expect(outcome).toEqual([{ kind: "winner", winner: "D1" }]);
+		expect(outcome).toEqual([{ kind: "winner", winner: "O1" }]);
 	});
 
 	it("does multiple rounds of voting if there is no initial majority", () => {
 		const outcome = vote({
-			destinations: ["D1", "D2", "D3"],
+			options: ["O1", "O2", "O3"],
 			votes: [
-				{ destinations: ["D1"], person: "P1" },
-				{ destinations: ["D1"], person: "P2" },
-				{ destinations: ["D2"], person: "P3" },
-				{ destinations: ["D2"], person: "P4" },
-				{ destinations: ["D3", "D1"], person: "P5" },
+				{ person: "P1", preferences: ["O1"] },
+				{ person: "P2", preferences: ["O1"] },
+				{ person: "P3", preferences: ["O2"] },
+				{ person: "P4", preferences: ["O2"] },
+				{ person: "P5", preferences: ["O3", "O1"] },
 			],
 		});
 
 		expect(outcome).toEqual([
-			{ eliminated: ["D3"], kind: "elimination" },
-			{ kind: "winner", winner: "D1" },
+			{ eliminated: ["O3"], kind: "elimination" },
+			{ kind: "winner", winner: "O1" },
 		]);
 	});
 });
 
 describe("singleRankedVoteRound", () => {
-	it("declares a winner when there is a destination with a majority", () => {
+	it("declares a winner when there is an option with a majority", () => {
 		const outcome = voteRound({
-			destinations: ["D1", "D2"],
+			options: ["O1", "O2"],
 			votes: [
-				{ destinations: ["D1"], person: "P1" },
-				{ destinations: ["D1"], person: "P2" },
-				{ destinations: ["D2"], person: "P3" },
+				{ person: "P1", preferences: ["O1"] },
+				{ person: "P2", preferences: ["O1"] },
+				{ person: "P3", preferences: ["O2"] },
 			],
 		});
 
-		expect(outcome).toEqual({ kind: "winner", winner: "D1" });
+		expect(outcome).toEqual({ kind: "winner", winner: "O1" });
 	});
 
-	it("declares a tie when the remaining destinations split the vote", () => {
+	it("declares a tie when the remaining options split the vote", () => {
 		const outcome = voteRound({
-			destinations: ["D1", "D2", "D3"],
+			options: ["O1", "O2", "O3"],
 			votes: [
-				{ destinations: ["D1"], person: "P1" },
-				{ destinations: ["D2"], person: "P2" },
-				{ destinations: ["D3"], person: "P3" },
+				{ person: "P1", preferences: ["O1"] },
+				{ person: "P2", preferences: ["O2"] },
+				{ person: "P3", preferences: ["O3"] },
 			],
 		});
 
 		expect(outcome).toEqual({
 			kind: "tie",
-			winners: ["D1", "D2", "D3"],
+			winners: ["O1", "O2", "O3"],
 		});
 	});
 
-	it("eliminates the all destinations with the least votes if there is no majority", () => {
+	it("eliminates all the options with the least votes if there is no majority", () => {
 		const outcome = voteRound({
-			destinations: ["D1", "D2", "D3", "D4", "D5"],
+			options: ["O1", "O2", "O3", "O4", "O5"],
 			votes: [
-				{ destinations: ["D1"], person: "P1" },
-				{ destinations: ["D2"], person: "P2" },
-				{ destinations: ["D3"], person: "P3" },
+				{ person: "P1", preferences: ["O1"] },
+				{ person: "P2", preferences: ["O2"] },
+				{ person: "P3", preferences: ["O3"] },
 			],
 		});
 
 		expect(outcome).toEqual({
-			eliminated: ["D4", "D5"],
+			eliminated: ["O4", "O5"],
 			kind: "elimination",
 		});
 	});
 
 	it("does not consider 50% of the vote a winner", () => {
 		const outcome = voteRound({
-			destinations: ["D1", "D2", "D3"],
+			options: ["O1", "O2", "O3"],
 			votes: [
-				{ destinations: ["D1"], person: "P1" },
-				{ destinations: ["D1"], person: "P2" },
-				{ destinations: ["D1"], person: "P3" },
-				{ destinations: ["D2"], person: "P4" },
-				{ destinations: ["D2"], person: "P5" },
-				{ destinations: ["D3"], person: "P6" },
+				{ person: "P1", preferences: ["O1"] },
+				{ person: "P2", preferences: ["O1"] },
+				{ person: "P3", preferences: ["O1"] },
+				{ person: "P4", preferences: ["O2"] },
+				{ person: "P5", preferences: ["O2"] },
+				{ person: "P6", preferences: ["O3"] },
 			],
 		});
 
-		expect(outcome).toEqual({ eliminated: ["D3"], kind: "elimination" });
+		expect(outcome).toEqual({ eliminated: ["O3"], kind: "elimination" });
 	});
 
 	it("ignores people with no votes left", () => {
 		const outcome = voteRound({
-			destinations: ["D1", "D2"],
+			options: ["O1", "O2"],
 			votes: [
-				{ destinations: [], person: "P1" },
-				{ destinations: ["D1"], person: "P2" },
-				{ destinations: ["D2"], person: "P3" },
+				{ person: "P1", preferences: [] },
+				{ person: "P2", preferences: ["O1"] },
+				{ person: "P3", preferences: ["O2"] },
 			],
 		});
 
 		expect(outcome).toEqual({
 			kind: "tie",
-			winners: ["D1", "D2"],
+			winners: ["O1", "O2"],
 		});
 	});
 });

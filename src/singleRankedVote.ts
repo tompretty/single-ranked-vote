@@ -1,31 +1,28 @@
 // ---- Types ---- //
 
-interface SingleRankedVoteConfig<
-	Destination extends string,
-	Person extends string,
-> {
-	destinations: Destination[];
-	votes: Vote<Person, Destination>[];
+interface SingleRankedVoteConfig<Option extends string, Person extends string> {
+	options: Option[];
+	votes: Vote<Option, Person>[];
 }
 
-interface Vote<Person extends string, Destination extends string> {
-	destinations: Destination[];
+interface Vote<Option extends string, Person extends string> {
 	person: Person;
+	preferences: Option[];
 }
 
-type SingleRankedVoteRoundOutcome<Destination extends string> =
-	| { eliminated: Destination[]; kind: "elimination" }
-	| { kind: "tie"; winners: Destination[] }
-	| { kind: "winner"; winner: Destination };
+type SingleRankedVoteRoundOutcome<Option extends string> =
+	| { eliminated: Option[]; kind: "elimination" }
+	| { kind: "tie"; winners: Option[] }
+	| { kind: "winner"; winner: Option };
 
-type RoundVoteCounts<Destination extends string> = Record<Destination, number>;
+type RoundVoteCounts<Option extends string> = Record<Option, number>;
 
 // ---- Vote ---- //
 
-export function vote<const Destination extends string, Person extends string>(
-	config: SingleRankedVoteConfig<Destination, Person>,
-): SingleRankedVoteRoundOutcome<Destination>[] {
-	const outcomes: SingleRankedVoteRoundOutcome<Destination>[] = [];
+export function vote<const Option extends string, Person extends string>(
+	config: SingleRankedVoteConfig<Option, Person>,
+): SingleRankedVoteRoundOutcome<Option>[] {
+	const outcomes: SingleRankedVoteRoundOutcome<Option>[] = [];
 
 	let currentConfig = config;
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -37,7 +34,7 @@ export function vote<const Destination extends string, Person extends string>(
 			break;
 		}
 
-		currentConfig = removeEliminatedDestinations(
+		currentConfig = removeEliminatedOptions(
 			currentConfig,
 			roundOutcome.eliminated,
 		);
@@ -48,96 +45,87 @@ export function vote<const Destination extends string, Person extends string>(
 
 // ---- Round ---- //
 
-export function voteRound<
-	const Destination extends string,
-	Person extends string,
->(
-	config: SingleRankedVoteConfig<Destination, Person>,
-): SingleRankedVoteRoundOutcome<Destination> {
+export function voteRound<const Option extends string, Person extends string>(
+	config: SingleRankedVoteConfig<Option, Person>,
+): SingleRankedVoteRoundOutcome<Option> {
 	const counts = countRoundVotes(config);
 
 	const threshold = getWinningThreshold(counts);
 
-	const winner = getDestinationOverThreshold(counts, threshold);
+	const winner = getOptionOverThreshold(counts, threshold);
 
 	if (winner) {
 		return { kind: "winner", winner };
 	}
 
 	if (isVoteSplitEqually(counts)) {
-		return { kind: "tie", winners: config.destinations };
+		return { kind: "tie", winners: config.options };
 	}
 
-	const eliminated = getEliminatedDestinations(counts);
+	const eliminated = getEliminatedOptions(counts);
 	return { eliminated, kind: "elimination" };
 }
 
 // ---- Helpers ---- //
 
-function countRoundVotes<
-	const Destination extends string,
-	Person extends string,
->(
-	config: SingleRankedVoteConfig<Destination, Person>,
-): RoundVoteCounts<Destination> {
+function countRoundVotes<Option extends string, Person extends string>(
+	config: SingleRankedVoteConfig<Option, Person>,
+): RoundVoteCounts<Option> {
 	const counts = Object.fromEntries(
-		config.destinations.map((d) => [d, 0]),
-	) as RoundVoteCounts<Destination>;
+		config.options.map((option) => [option, 0]),
+	) as RoundVoteCounts<Option>;
 
 	config.votes
-		.filter((v) => v.destinations.length > 0)
+		.filter((v) => v.preferences.length > 0)
 		.forEach((v) => {
-			const destination = v.destinations[0];
-			counts[destination] += +1;
+			const option = v.preferences[0];
+			counts[option] += +1;
 		});
 
 	return counts;
 }
 
-function getDestinationOverThreshold<Destination extends string>(
-	counts: RoundVoteCounts<Destination>,
+function getOptionOverThreshold<Option extends string>(
+	counts: RoundVoteCounts<Option>,
 	threshold: number,
-): Destination | undefined {
-	const entries = Object.entries(counts) as [Destination, number][];
-	for (const [destination, count] of entries) {
+): Option | undefined {
+	const entries = Object.entries(counts) as [Option, number][];
+	for (const [option, count] of entries) {
 		if (count >= threshold) {
-			return destination;
+			return option;
 		}
 	}
 }
 
-function isVoteSplitEqually<Destination extends string>(
-	counts: RoundVoteCounts<Destination>,
+function isVoteSplitEqually<Option extends string>(
+	counts: RoundVoteCounts<Option>,
 ): boolean {
 	const numVotes = Object.values<number>(counts);
 	const result = numVotes.slice(1).every((n) => n === numVotes[0]);
 	return result;
 }
 
-function removeEliminatedDestinations<
-	const Destination extends string,
-	Person extends string,
->(
-	config: SingleRankedVoteConfig<Destination, Person>,
-	eliminated: Destination[],
-): SingleRankedVoteConfig<Destination, Person> {
-	const updatedDestinations = config.destinations.filter(
-		(d) => !eliminated.includes(d),
+function removeEliminatedOptions<Option extends string, Person extends string>(
+	config: SingleRankedVoteConfig<Option, Person>,
+	eliminated: Option[],
+): SingleRankedVoteConfig<Option, Person> {
+	const updatedOptions = config.options.filter(
+		(option) => !eliminated.includes(option),
 	);
 	const updatedVotes = config.votes.map((v) => {
-		const updatedVote: Vote<Person, Destination> = {
+		const updatedVote: Vote<Option, Person> = {
 			...v,
-			destinations: v.destinations.filter((d) => !eliminated.includes(d)),
+			preferences: v.preferences.filter((d) => !eliminated.includes(d)),
 		};
 
 		return updatedVote;
 	});
 
-	return { destinations: updatedDestinations, votes: updatedVotes };
+	return { options: updatedOptions, votes: updatedVotes };
 }
 
-function getWinningThreshold<Destination extends string>(
-	counts: RoundVoteCounts<Destination>,
+function getWinningThreshold<Option extends string>(
+	counts: RoundVoteCounts<Option>,
 ): number {
 	const numVotes = Object.values<number>(counts).reduce(
 		(sum, num) => sum + num,
@@ -147,15 +135,15 @@ function getWinningThreshold<Destination extends string>(
 	return Math.floor(numVotes / 2) + 1;
 }
 
-function getEliminatedDestinations<Destination extends string>(
-	counts: RoundVoteCounts<Destination>,
-): Destination[] {
+function getEliminatedOptions<Option extends string>(
+	counts: RoundVoteCounts<Option>,
+): Option[] {
 	const min = Math.min(...Object.values<number>(counts));
 
-	const entries = Object.entries(counts) as [Destination, number][];
+	const entries = Object.entries(counts) as [Option, number][];
 	const eliminated = entries
 		.filter(([, count]) => count === min)
-		.map(([d]) => d);
+		.map(([option]) => option);
 
 	return eliminated;
 }

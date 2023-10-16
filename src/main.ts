@@ -1,7 +1,7 @@
 import { vote } from "./singleRankedVote.js";
 
 const outcome = vote({
-	destinations: [
+	options: [
 		"Cyrpus",
 		"Spain",
 		"Turkey",
@@ -12,11 +12,11 @@ const outcome = vote({
 		"Iceland",
 	],
 	votes: [
-		{ destinations: ["Spain", "Portugal"], person: "Dylan" },
-		{ destinations: ["Turkey", "Spain", "Portugal"], person: "Emily" },
-		{ destinations: ["Turkey", "Spain", "Portugal"], person: "Jay" },
-		{ destinations: ["Turkey", "Spain", "Portugal"], person: "Susanna" },
-		{ destinations: ["Spain", "Portugal", "Turkey"], person: "Tom" },
+		{ person: "Dylan", preferences: ["Spain", "Portugal"] },
+		{ person: "Emily", preferences: ["Turkey", "Spain", "Portugal"] },
+		{ person: "Jay", preferences: ["Turkey", "Spain", "Portugal"] },
+		{ person: "Susanna", preferences: ["Turkey", "Spain", "Portugal"] },
+		{ person: "Tom", preferences: ["Spain", "Portugal", "Turkey"] },
 	],
 });
 
