@@ -1,6 +1,6 @@
 <h1 align="center">Single ranked vote</h1>
 
-<p align="center">A simple single ranked voite algorithm for choosing our holiday destination</p>
+<p align="center">A simple single ranked vote algorithm for choosing our holiday destination</p>
 
 <p align="center">
 	<a href="#contributors" target="_blank">

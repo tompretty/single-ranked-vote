@@ -1,14 +1,14 @@
 {
 	"name": "single-ranked-vote",
 	"version": "1.0.0",
-	"description": "A simple single ranked voite algorithm for choosing our holiday destination",
+	"description": "A simple single ranked vote algorithm for choosing our holiday destination",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/tompretty/single-ranked-vote"
 	},
 	"license": "MIT",
 	"author": {
-		"name": "tompretty",
+		"name": "Tom Pretty",
 		"email": "tompretty2@gmail.com"
 	},
 	"type": "module",

@@ -2,7 +2,7 @@ import { vote } from "./singleRankedVote.js";
 
 const outcome = vote({
 	options: [
-		"Cyrpus",
+		"Cyprus",
 		"Spain",
 		"Turkey",
 		"Portugal",
