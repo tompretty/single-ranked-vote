@@ -1,24 +1,23 @@
-import { Votes, singleRankedVote } from "./singleRankedVote.js";
+import { vote } from "./singleRankedVote.js";
 
-const votes: Votes = {
-	Dylan: ["Spain", "Portugal"],
-	Emily: ["Turkey", "Spain", "Portugal"],
-	Jay: ["Turkey", "Spain", "Portugal"],
-	Susanna: ["Turkey", "Spain", "Portugal"],
-	Tom: ["Spain", "Portugal", "Turkey"],
-};
-
-const destinations = [
-	"Cyrpus",
-	"Spain",
-	"Turkey",
-	"Portugal",
-	"Tunisia",
-	"North Macedonia",
-	"Cape Verde",
-	"Iceland",
-];
-
-const outcome = singleRankedVote(votes, destinations);
+const outcome = vote({
+	destinations: [
+		"Cyrpus",
+		"Spain",
+		"Turkey",
+		"Portugal",
+		"Tunisia",
+		"North Macedonia",
+		"Cape Verde",
+		"Iceland",
+	],
+	votes: [
+		{ destinations: ["Spain", "Portugal"], person: "Dylan" },
+		{ destinations: ["Turkey", "Spain", "Portugal"], person: "Emily" },
+		{ destinations: ["Turkey", "Spain", "Portugal"], person: "Jay" },
+		{ destinations: ["Turkey", "Spain", "Portugal"], person: "Susanna" },
+		{ destinations: ["Spain", "Portugal", "Turkey"], person: "Tom" },
+	],
+});
 
 console.dir({ outcome }, { depth: null });

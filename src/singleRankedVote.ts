@@ -1,146 +1,161 @@
-export type Votes = Record<string, string[]>;
+// ---- Types ---- //
 
-type RoundOutcome =
-	| EliminationOutcome
-	| TieDeclaredOutcome
-	| WinnerDeclaredOutcome;
-
-interface WinnerDeclaredOutcome {
-	type: "WINNER_DECLARED";
-	winner: string;
+interface SingleRankedVoteConfig<
+	Destination extends string,
+	Person extends string,
+> {
+	destinations: Destination[];
+	votes: Vote<Person, Destination>[];
 }
 
-interface TieDeclaredOutcome {
-	type: "TIE_DECLARED";
-	winners: string[];
+interface Vote<Person extends string, Destination extends string> {
+	destinations: Destination[];
+	person: Person;
 }
 
-interface EliminationOutcome {
-	eliminated: string[];
-	type: "ELIMINATION";
-}
+type SingleRankedVoteRoundOutcome<Destination extends string> =
+	| { eliminated: Destination[]; kind: "elimination" }
+	| { kind: "tie"; winners: Destination[] }
+	| { kind: "winner"; winner: Destination };
 
-export function singleRankedVote(
-	votes: Votes,
-	destinations: string[],
-	outcomes: RoundOutcome[] = [],
-): RoundOutcome[] {
-	const outcome = singleRankedVoteRound(votes, destinations);
+type RoundVoteCounts<Destination extends string> = Record<Destination, number>;
 
-	const newOutcomes = [...outcomes, outcome];
+// ---- Vote ---- //
 
-	if (outcome.type === "WINNER_DECLARED" || outcome.type === "TIE_DECLARED") {
-		return newOutcomes;
+export function vote<const Destination extends string, Person extends string>(
+	config: SingleRankedVoteConfig<Destination, Person>,
+): SingleRankedVoteRoundOutcome<Destination>[] {
+	const outcomes: SingleRankedVoteRoundOutcome<Destination>[] = [];
+
+	let currentConfig = config;
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+	while (true) {
+		const roundOutcome = voteRound(currentConfig);
+		outcomes.push(roundOutcome);
+
+		if (roundOutcome.kind === "winner" || roundOutcome.kind === "tie") {
+			break;
+		}
+
+		currentConfig = removeEliminatedDestinations(
+			currentConfig,
+			roundOutcome.eliminated,
+		);
 	}
 
-	return singleRankedVote(
-		removeEliminatedVotes(votes, outcome.eliminated),
-		removeEliminatedDestinations(destinations, outcome.eliminated),
-		newOutcomes,
-	);
+	return outcomes;
 }
 
-export function singleRankedVoteRound(
-	votes: Votes,
-	destinations: string[],
-): RoundOutcome {
-	const voteCount = countVotes(votes, destinations);
+// ---- Round ---- //
 
-	const threshold = getWinningThreshold(voteCount);
+export function voteRound<
+	const Destination extends string,
+	Person extends string,
+>(
+	config: SingleRankedVoteConfig<Destination, Person>,
+): SingleRankedVoteRoundOutcome<Destination> {
+	const counts = countRoundVotes(config);
 
-	const winners = getDestinationsOverTheThreshold(voteCount, threshold);
+	const threshold = getWinningThreshold(counts);
 
-	if (winners.length === 1) {
-		// There was a single destination over the threshold, declare it the winner
-		return winner(winners[0]);
-	} else if (winners.length === 2) {
-		// There are two destinations that split the vote 50/50, declare it a tie
-		return tie(winners);
+	const winner = getDestinationOverThreshold(counts, threshold);
+
+	if (winner) {
+		return { kind: "winner", winner };
 	}
 
-	if (isEveryRemainingDestinationEqual(voteCount)) {
-		return tie(destinations);
+	if (isVoteSplitEqually(counts)) {
+		return { kind: "tie", winners: config.destinations };
 	}
 
-	const eliminated = getEliminatedDestinations(voteCount);
-
-	return elimination(eliminated);
+	const eliminated = getEliminatedDestinations(counts);
+	return { eliminated, kind: "elimination" };
 }
 
 // ---- Helpers ---- //
 
-type VoteCount = Record<string, number>;
+function countRoundVotes<
+	const Destination extends string,
+	Person extends string,
+>(
+	config: SingleRankedVoteConfig<Destination, Person>,
+): RoundVoteCounts<Destination> {
+	const counts = Object.fromEntries(
+		config.destinations.map((d) => [d, 0]),
+	) as RoundVoteCounts<Destination>;
 
-function countVotes(votes: Votes, destinations: string[]): VoteCount {
-	const initialCounts = destinations.reduce<Record<string, number>>(
-		(counts, d) => ({ ...counts, [d]: 0 }),
-		{},
-	);
+	config.votes
+		.filter((v) => v.destinations.length > 0)
+		.forEach((v) => {
+			const destination = v.destinations[0];
+			counts[destination] += +1;
+		});
 
-	return Object.entries(votes)
-		.filter(([, destinations]) => destinations.length > 0)
-		.reduce<Record<string, number>>(
-			(counts, [, destinations]) => ({
-				...counts,
-				[destinations[0]]: counts[destinations[0]] + 1,
-			}),
-			initialCounts,
-		);
+	return counts;
 }
 
-function getDestinationsOverTheThreshold(
-	voteCount: VoteCount,
+function getDestinationOverThreshold<Destination extends string>(
+	counts: RoundVoteCounts<Destination>,
 	threshold: number,
-): string[] {
-	return Object.entries(voteCount)
-		.filter(([, score]) => score >= threshold)
-		.map(([d]) => d);
+): Destination | undefined {
+	const entries = Object.entries(counts) as [Destination, number][];
+	for (const [destination, count] of entries) {
+		if (count >= threshold) {
+			return destination;
+		}
+	}
 }
 
-function getWinningThreshold(voteCount: VoteCount): number {
-	const numVotes = Object.values(voteCount).reduce((sum, num) => sum + num, 0);
-
-	return Math.ceil(numVotes / 2);
+function isVoteSplitEqually<Destination extends string>(
+	counts: RoundVoteCounts<Destination>,
+): boolean {
+	const numVotes = Object.values<number>(counts);
+	const result = numVotes.slice(1).every((n) => n === numVotes[0]);
+	return result;
 }
 
-function isEveryRemainingDestinationEqual(voteCount: VoteCount): boolean {
-	const referenceScore = Object.values(voteCount)[0];
-
-	return Object.values(voteCount).every((score) => score === referenceScore);
-}
-
-function getEliminatedDestinations(voteCount: VoteCount): string[] {
-	const min = Math.min(...Object.values(voteCount));
-
-	return Object.entries(voteCount)
-		.filter(([, score]) => score === min)
-		.map(([d]) => d);
-}
-
-function winner(winner: string): WinnerDeclaredOutcome {
-	return { type: "WINNER_DECLARED", winner };
-}
-
-function tie(winners: string[]): TieDeclaredOutcome {
-	return { type: "TIE_DECLARED", winners };
-}
-
-function elimination(eliminated: string[]): EliminationOutcome {
-	return { eliminated, type: "ELIMINATION" };
-}
-
-function removeEliminatedVotes(votes: Votes, eliminated: string[]): Votes {
-	return Object.fromEntries(
-		Object.entries(votes).map(([member, ranking]) => [
-			member,
-			removeEliminatedDestinations(ranking, eliminated),
-		]),
+function removeEliminatedDestinations<
+	const Destination extends string,
+	Person extends string,
+>(
+	config: SingleRankedVoteConfig<Destination, Person>,
+	eliminated: Destination[],
+): SingleRankedVoteConfig<Destination, Person> {
+	const updatedDestinations = config.destinations.filter(
+		(d) => !eliminated.includes(d),
 	);
+	const updatedVotes = config.votes.map((v) => {
+		const updatedVote: Vote<Person, Destination> = {
+			...v,
+			destinations: v.destinations.filter((d) => !eliminated.includes(d)),
+		};
+
+		return updatedVote;
+	});
+
+	return { destinations: updatedDestinations, votes: updatedVotes };
 }
 
-function removeEliminatedDestinations(
-	destinations: string[],
-	eliminated: string[],
-): string[] {
-	return destinations.filter((d) => !eliminated.includes(d));
+function getWinningThreshold<Destination extends string>(
+	counts: RoundVoteCounts<Destination>,
+): number {
+	const numVotes = Object.values<number>(counts).reduce(
+		(sum, num) => sum + num,
+		0,
+	);
+
+	return Math.floor(numVotes / 2) + 1;
+}
+
+function getEliminatedDestinations<Destination extends string>(
+	counts: RoundVoteCounts<Destination>,
+): Destination[] {
+	const min = Math.min(...Object.values<number>(counts));
+
+	const entries = Object.entries(counts) as [Destination, number][];
+	const eliminated = entries
+		.filter(([, count]) => count === min)
+		.map(([d]) => d);
+
+	return eliminated;
 }

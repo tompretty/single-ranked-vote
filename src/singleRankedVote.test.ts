@@ -1,118 +1,115 @@
 import { describe, expect, it } from "vitest";
 
-import {
-	Votes,
-	singleRankedVote,
-	singleRankedVoteRound,
-} from "./singleRankedVote.js";
+import { vote, voteRound } from "./singleRankedVote.js";
 
 describe("singleRankedVote", () => {
 	it("declares a winner if a destination gets more than 50% of the vote", () => {
-		const votes: Votes = {
-			Dylan: ["Cyprus"],
-			Emily: ["Spain"],
-			Tom: ["Spain"],
-		};
-		const destinations = ["Spain", "Cyprus"];
+		const outcome = vote({
+			destinations: ["D1", "D2"],
+			votes: [
+				{ destinations: ["D1"], person: "P1" },
+				{ destinations: ["D1"], person: "P2" },
+				{ destinations: ["D2"], person: "P3" },
+			],
+		});
 
-		const outcome = singleRankedVote(votes, destinations);
-
-		expect(outcome).toEqual([{ type: "WINNER_DECLARED", winner: "Spain" }]);
+		expect(outcome).toEqual([{ kind: "winner", winner: "D1" }]);
 	});
 
 	it("does multiple rounds of voting if there is no initial majority", () => {
-		const votes: Votes = {
-			Dylan: ["Cyprus"],
-			Emily: ["Spain"],
-			Jay: ["Turkey", "Spain"],
-			Susanna: ["Cyprus"],
-			Tom: ["Spain"],
-		};
-		const destinations = ["Spain", "Cyprus", "Turkey"];
-
-		const outcome = singleRankedVote(votes, destinations);
+		const outcome = vote({
+			destinations: ["D1", "D2", "D3"],
+			votes: [
+				{ destinations: ["D1"], person: "P1" },
+				{ destinations: ["D1"], person: "P2" },
+				{ destinations: ["D2"], person: "P3" },
+				{ destinations: ["D2"], person: "P4" },
+				{ destinations: ["D3", "D1"], person: "P5" },
+			],
+		});
 
 		expect(outcome).toEqual([
-			{ eliminated: ["Turkey"], type: "ELIMINATION" },
-			{ type: "WINNER_DECLARED", winner: "Spain" },
+			{ eliminated: ["D3"], kind: "elimination" },
+			{ kind: "winner", winner: "D1" },
 		]);
 	});
 });
 
 describe("singleRankedVoteRound", () => {
 	it("declares a winner when there is a destination with a majority", () => {
-		const votes: Votes = {
-			Dylan: ["Cyprus"],
-			Emily: ["Spain"],
-			Tom: ["Spain"],
-		};
-		const destinations = ["Spain", "Cyprus"];
+		const outcome = voteRound({
+			destinations: ["D1", "D2"],
+			votes: [
+				{ destinations: ["D1"], person: "P1" },
+				{ destinations: ["D1"], person: "P2" },
+				{ destinations: ["D2"], person: "P3" },
+			],
+		});
 
-		const outcome = singleRankedVoteRound(votes, destinations);
-
-		expect(outcome).toEqual({ type: "WINNER_DECLARED", winner: "Spain" });
+		expect(outcome).toEqual({ kind: "winner", winner: "D1" });
 	});
 
-	it("declares a tie when there are two destinations that share 50% of the vote", () => {
-		const votes: Votes = {
-			Emily: ["Cyprus"],
-			Tom: ["Spain"],
-		};
-		const destinations = ["Spain", "Cyprus"];
-
-		const outcome = singleRankedVoteRound(votes, destinations);
+	it("declares a tie when the remaining destinations split the vote", () => {
+		const outcome = voteRound({
+			destinations: ["D1", "D2", "D3"],
+			votes: [
+				{ destinations: ["D1"], person: "P1" },
+				{ destinations: ["D2"], person: "P2" },
+				{ destinations: ["D3"], person: "P3" },
+			],
+		});
 
 		expect(outcome).toEqual({
-			type: "TIE_DECLARED",
-			winners: ["Spain", "Cyprus"],
+			kind: "tie",
+			winners: ["D1", "D2", "D3"],
 		});
 	});
 
 	it("eliminates the all destinations with the least votes if there is no majority", () => {
-		const votes: Votes = {
-			Dylan: ["Turkey"],
-			Emily: ["Cyprus"],
-			Tom: ["Spain"],
-		};
-		const destinations = ["Spain", "Cyprus", "Turkey", "Portugal", "Tunisia"];
-
-		const outcome = singleRankedVoteRound(votes, destinations);
+		const outcome = voteRound({
+			destinations: ["D1", "D2", "D3", "D4", "D5"],
+			votes: [
+				{ destinations: ["D1"], person: "P1" },
+				{ destinations: ["D2"], person: "P2" },
+				{ destinations: ["D3"], person: "P3" },
+			],
+		});
 
 		expect(outcome).toEqual({
-			eliminated: ["Portugal", "Tunisia"],
-			type: "ELIMINATION",
+			eliminated: ["D4", "D5"],
+			kind: "elimination",
 		});
 	});
 
-	it("declares a tie if all the remaining destinations split the vote equally", () => {
-		const votes: Votes = {
-			Dylan: ["Turkey"],
-			Emily: ["Cyprus"],
-			Tom: ["Spain"],
-		};
-		const destinations = ["Spain", "Cyprus", "Turkey"];
-
-		const outcome = singleRankedVoteRound(votes, destinations);
-
-		expect(outcome).toEqual({
-			type: "TIE_DECLARED",
-			winners: ["Spain", "Cyprus", "Turkey"],
+	it("does not consider 50% of the vote a winner", () => {
+		const outcome = voteRound({
+			destinations: ["D1", "D2", "D3"],
+			votes: [
+				{ destinations: ["D1"], person: "P1" },
+				{ destinations: ["D1"], person: "P2" },
+				{ destinations: ["D1"], person: "P3" },
+				{ destinations: ["D2"], person: "P4" },
+				{ destinations: ["D2"], person: "P5" },
+				{ destinations: ["D3"], person: "P6" },
+			],
 		});
+
+		expect(outcome).toEqual({ eliminated: ["D3"], kind: "elimination" });
 	});
 
-	it("ignores members with no votes left", () => {
-		const votes: Votes = {
-			Dylan: [],
-			Emily: ["Cyprus"],
-			Tom: ["Spain"],
-		};
-		const destinations = ["Spain", "Cyprus"];
-
-		const outcome = singleRankedVoteRound(votes, destinations);
+	it("ignores people with no votes left", () => {
+		const outcome = voteRound({
+			destinations: ["D1", "D2"],
+			votes: [
+				{ destinations: [], person: "P1" },
+				{ destinations: ["D1"], person: "P2" },
+				{ destinations: ["D2"], person: "P3" },
+			],
+		});
 
 		expect(outcome).toEqual({
-			type: "TIE_DECLARED",
-			winners: ["Spain", "Cyprus"],
+			kind: "tie",
+			winners: ["D1", "D2"],
 		});
 	});
 });
